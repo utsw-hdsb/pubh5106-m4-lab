@@ -71,6 +71,15 @@ using .LabUtils
 using BayesNets
 using JSON3
 
+# Bring all exported names into scope explicitly
+# (Colab's cell-by-cell execution can lose module scope)
+import .LabUtils: set_api_keys, call_llm, ask_llm_probability,
+    load_precomputed_llm, brier_score, calibration_error,
+    score_round, show_calibration, submit_to_leaderboard,
+    build_asia_network, build_child_network,
+    query_bn, query_bn_all, bn_node_names, bn_parents,
+    verify_setup, BNCategorical
+
 # %% [markdown]
 # ### Your Group Name and API Keys
 #
