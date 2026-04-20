@@ -70,10 +70,6 @@ include("lab_utils.jl")
 using .LabUtils
 using BayesNets
 
-# Re-export for convenience in notebook
-using CairoMakie
-using GraphMakie
-using Graphs
 using JSON3
 
 # %% [markdown]
@@ -281,8 +277,9 @@ println("ASIA network: $(length(bn_node_names(asia))) nodes")
 # ### 2.2 Visualize Your Network
 
 # %%
-fig = plot_bn(asia; title="ASIA Network (Lauritzen & Spiegelhalter, 1988)")
-fig
+# Display the ASIA network structure
+using Markdown
+display(Markdown.parse("![ASIA Network](data/asia_network.svg)"))
 
 # %% [markdown]
 # ### 2.3 Query the Network
@@ -362,14 +359,12 @@ submit_to_leaderboard(2, r2_result)
 # 6. Lung disease
 
 # %%
-# Load the CHILD network
-child = load_child_network(joinpath(LabUtils.DATA_DIR[], "child.bif"))
+# Load the CHILD network (pre-built, no file parsing needed)
+child = build_child_network()
 println("CHILD network: $(length(bn_node_names(child))) nodes")
 
-# Visualize
-fig_child = plot_bn(child; title="CHILD Network (Spiegelhalter & Cowell, 1992)",
-                    size=(900, 600))
-fig_child
+# Display the network structure
+display(Markdown.parse("![CHILD Network](data/child_network.svg)"))
 
 # %%
 # Load the clinical cases
@@ -432,13 +427,6 @@ r3_llm_estimates = Float64.(r3_llm_results)
 show_calibration("Round 3 — Head to Head",
                  r3_bn_estimates, r3_llm_estimates, r3_human,
                  r3_truth)
-
-# %%
-# Visual comparison
-fig_r3 = plot_calibration_comparison(
-    [String(c.label) for c in child_cases],
-    r3_bn_estimates, r3_llm_estimates, r3_human, r3_truth)
-fig_r3
 
 # %%
 r3_result = score_round(r3_bn_estimates, r3_truth)

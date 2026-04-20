@@ -15,15 +15,11 @@ posteriors, and comparing BN uncertainty to LLM confidence.
 module LabUtils
 
 using BayesNets
-using Graphs
-using GraphMakie
-using CairoMakie
 using HTTP
 using JSON3
 using DataFrames
 using Printf
 
-# Resolve name collision: both BayesNets and CairoMakie export Categorical
 const BNCategorical = BayesNets.Categorical
 
 export
@@ -44,8 +40,6 @@ export
     build_asia_network, build_child_network,
     query_bn, query_bn_all,
     bn_node_names, bn_parents,
-    # Visualization
-    plot_bn, plot_calibration_comparison,
     # Verification
     verify_setup
 
@@ -347,80 +341,6 @@ function show_calibration(label::String,
 end
 
 # ─────────────────────────────────────────────────────────────────────
-# Visualization
-# ─────────────────────────────────────────────────────────────────────
-
-function plot_bn(bn::DiscreteBayesNet;
-                 title::String="",
-                 highlight::Dict{Symbol,Symbol}=Dict{Symbol,Symbol}(),
-                 size=(700, 500))
-    node_names = names(bn)
-    n = length(node_names)
-
-    g = SimpleDiGraph(n)
-    name_to_idx = Dict(node_names[i] => i for i in 1:n)
-
-    for node in node_names
-        for parent in parents(bn, node)
-            add_edge!(g, name_to_idx[parent], name_to_idx[node])
-        end
-    end
-
-    node_colors = [get(highlight, node_names[i], :lightblue) for i in 1:n]
-    labels = [String(s) for s in node_names]
-
-    fig, ax, p = graphplot(g;
-        layout=Buchheim(),
-        nlabels=labels,
-        nlabels_align=(:center, :center),
-        nlabels_fontsize=11,
-        node_color=node_colors,
-        node_size=30,
-        arrow_size=15,
-        edge_color=:gray60,
-        figure=(; size=size),
-    )
-
-    if !isempty(title)
-        ax.title = title
-    end
-    hidedecorations!(ax)
-    hidespines!(ax)
-
-    return fig
-end
-
-function plot_calibration_comparison(case_labels::Vector{String},
-                                     bn_probs::Vector{Float64},
-                                     llm_probs::Vector{Float64},
-                                     human_probs::Vector{Float64},
-                                     truth::Vector{Int})
-    n = length(case_labels)
-    x = 1:n
-    width = 0.2
-
-    fig = Figure(size=(800, 400))
-    ax = Axis(fig[1, 1];
-        xlabel="Case",
-        ylabel="Probability",
-        title="Calibration Comparison: BN vs LLM vs Human",
-        xticks=(x, case_labels),
-        yticks=0:0.1:1.0,
-    )
-
-    barplot!(ax, x .- width, bn_probs; width=width, color=:steelblue, label="Bayesian Net")
-    barplot!(ax, x, llm_probs; width=width, color=:coral, label="LLM")
-    barplot!(ax, x .+ width, human_probs; width=width, color=:seagreen, label="Human")
-
-    scatter!(ax, x, Float64.(truth); color=:black, markersize=12, marker=:star5, label="Ground Truth")
-
-    axislegend(ax; position=:lt)
-    ylims!(ax, 0, 1.05)
-
-    return fig
-end
-
-# ─────────────────────────────────────────────────────────────────────
 # Leaderboard
 # ─────────────────────────────────────────────────────────────────────
 
@@ -482,7 +402,6 @@ function verify_setup()
     end
 
     println("\nBayesNets.jl: loaded ✓")
-    println("GraphMakie/CairoMakie: loaded ✓")
 end
 
 # ─────────────────────────────────────────────────────────────────────
