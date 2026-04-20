@@ -4,21 +4,29 @@
 
 A competitive lab where student teams compare three approaches to clinical reasoning under uncertainty: human intuition, a Bayesian network, and an LLM. Scored on **calibration** — not who is most confident, but who is most *accurately* confident.
 
-## Quick Start
+## Quick Start — Choose Your Platform
 
-### Option A: GitHub Codespaces
+### Option A: GitHub Codespaces (recommended)
 
 1. Click the green **Code** button → **Create codespace on main**
 2. Wait for setup (~5 min — installs Julia + packages)
 3. Open `M4_lab.ipynb`
 
-### Option B: Google Colab
+### Option B: Binder
 
-1. Open [M4_lab_colab.ipynb](colab/M4_lab_colab.ipynb) in Colab
-2. Go to **Runtime → Change runtime type → Julia**
-3. Run the first cell to install packages and download lab files (~2-3 min)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/utsw-hdsb/pubh5106-m4-lab/main?urlpath=lab%2Ftree%2FM4_lab.ipynb)
 
-### Option C: Run Locally
+Click the badge above. First build takes ~5-10 min (Julia package compilation). Subsequent launches are faster if the image is cached.
+
+### Option C: Google Colab
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/utsw-hdsb/pubh5106-m4-lab/blob/main/colab/M4_lab_colab.ipynb)
+
+Click the badge above, then:
+1. Go to **Runtime → Change runtime type → Julia**
+2. Run the first cell to install packages and download lab files (~2-3 min)
+
+### Option D: Run Locally
 
 See [LOCAL_SETUP_GUIDE.md](LOCAL_SETUP_GUIDE.md) for step-by-step instructions (Mac and Windows). No separate Python installation needed — Julia manages everything.
 
@@ -40,17 +48,21 @@ See [LOCAL_SETUP_GUIDE.md](LOCAL_SETUP_GUIDE.md) for step-by-step instructions (
 
 ```
 .
-├── M4_lab.ipynb          # Lab notebook
-├── M4_lab.jl             # Notebook source (jupytext)
-├── lab_utils.jl          # Shared utilities (BN, Groq API, scoring)
-├── Project.toml          # Julia dependencies
-├── LOCAL_SETUP_GUIDE.md  # Local installation instructions
-├── README.md             # This file
+├── M4_lab.ipynb           # Lab notebook (Codespaces / Binder / Local)
+├── M4_lab.jl              # Notebook source (jupytext)
+├── colab/
+│   └── M4_lab_colab.ipynb # Self-contained Colab version
+├── lab_utils.jl           # Shared utilities (BN, Groq API, scoring)
+├── Project.toml           # Julia dependencies
+├── LOCAL_SETUP_GUIDE.md   # Local installation instructions
+├── README.md              # This file
 ├── .devcontainer/
-│   └── devcontainer.json # Codespaces configuration
+│   └── devcontainer.json  # Codespaces configuration
 └── data/
-    ├── vignettes.json        # Clinical cases
-    └── llm_precomputed.json  # Pre-computed LLM responses (fallback)
+    ├── vignettes.json         # Clinical cases
+    ├── llm_precomputed.json   # Pre-computed LLM responses (fallback)
+    ├── asia_network.svg       # ASIA network DAG (pre-rendered)
+    └── child_network.svg      # CHILD network DAG (pre-rendered)
 ```
 
 ## Submission
