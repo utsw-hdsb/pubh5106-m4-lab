@@ -12,7 +12,13 @@ A competitive lab where student teams compare three approaches to clinical reaso
 2. Wait for setup (~5 min — installs Julia + packages)
 3. Open `M4_lab.ipynb`
 
-### Option B: Run Locally
+### Option B: Google Colab
+
+1. Open [M4_lab_colab.ipynb](colab/M4_lab_colab.ipynb) in Colab
+2. Go to **Runtime → Change runtime type → Julia**
+3. Run the first cell to install packages and download lab files (~2-3 min)
+
+### Option C: Run Locally
 
 See [LOCAL_SETUP_GUIDE.md](LOCAL_SETUP_GUIDE.md) for step-by-step instructions (Mac and Windows). No separate Python installation needed — Julia manages everything.
 
