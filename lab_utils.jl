@@ -54,11 +54,11 @@ GROUP_NAME = Ref("CHANGE_ME")
 DATA_DIR = Ref("data")
 
 # Leaderboard (Google Forms) — instructor configures before class
-FORM_URL = Ref("https://docs.google.com/forms/d/e/REPLACE_ME/formResponse")
-FIELD_GROUP = Ref("entry.REPLACE1")
-FIELD_ROUND = Ref("entry.REPLACE2")
-FIELD_SCORE = Ref("entry.REPLACE3")
-FIELD_DETAIL = Ref("entry.REPLACE4")
+FORM_URL = Ref("https://docs.google.com/forms/d/e/1FAIpQLSdye6IlNCalUqxeXorKXchIEYda7Lv1Q_nZoM3myeHsRPNv_Q/formResponse")
+FIELD_GROUP = Ref("entry.580574446")
+FIELD_ROUND = Ref("entry.2102634743")
+FIELD_SCORE = Ref("entry.1233314305")
+FIELD_DETAIL = Ref("entry.1762914451")
 
 # ─────────────────────────────────────────────────────────────────────
 # API Key Management
