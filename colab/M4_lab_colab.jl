@@ -205,8 +205,8 @@ r1_truth = [case.ground_truth for case in r1_cases]
 # ### 1.2 Score Your Intuition
 
 # %%
-r1_result = score_round(r1_human, [round(Int, t) for t in r1_truth .>= 0.5])
-println("Your Brier score: $(brier_score(r1_human, [round(Int, t) for t in r1_truth .>= 0.5]))")
+r1_result = score_round(r1_human, [Int(t >= 0.5) for t in r1_truth])
+println("Your Brier score: $(brier_score(r1_human, [Int(t >= 0.5) for t in r1_truth]))")
 
 println("\n  Case  Your Est.  Truth     Error")
 println("  " * "-"^40)
