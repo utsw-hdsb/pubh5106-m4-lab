@@ -287,30 +287,52 @@ display(Markdown.parse("![ASIA Network](data/asia_network.svg)"))
 # Test your network with some clinical scenarios.
 
 # %%
+# Check your network is complete before querying
+if length(bn_node_names(asia)) < 8
+    println("⚠ Your network has $(length(bn_node_names(asia)))/8 nodes.")
+    println("  Complete the TODO cells above before running queries.")
+    println("  Missing: $(setdiff([:Asia,:Smoker,:LungCancer,:Bronchitis,:Tuberculosis,:TbOrCancer,:XRay,:Dyspnoea], bn_node_names(asia)))")
+else
+    println("✓ Network complete: $(length(bn_node_names(asia))) nodes")
+end
+
+# %%
 # Prior probabilities (no evidence)
 println("=== Prior Probabilities (no evidence) ===")
 for node in [:LungCancer, :Tuberculosis, :Bronchitis]
-    p = query_bn(asia, node)
-    println("  P($(node) = yes) = $(round(p[2]; digits=4))")
+    if node in bn_node_names(asia)
+        p = query_bn(asia, node)
+        println("  P($(node) = yes) = $(round(p[2]; digits=4))")
+    else
+        println("  $(node): not yet added to network")
+    end
 end
 
 # %%
 # What if the patient is a smoker with an abnormal X-ray?
 # State 2 = yes/present for all nodes
-println("=== Smoker with abnormal X-ray ===")
-evidence = Assignment(:Smoker => 2, :XRay => 2)
-for node in [:LungCancer, :Tuberculosis, :Bronchitis]
-    p = query_bn(asia, node; evidence=evidence)
-    println("  P($(node) = yes | Smoker, abnormal XRay) = $(round(p[2]; digits=4))")
+if length(bn_node_names(asia)) == 8
+    println("=== Smoker with abnormal X-ray ===")
+    evidence = Assignment(:Smoker => 2, :XRay => 2)
+    for node in [:LungCancer, :Tuberculosis, :Bronchitis]
+        p = query_bn(asia, node; evidence=evidence)
+        println("  P($(node) = yes | Smoker, abnormal XRay) = $(round(p[2]; digits=4))")
+    end
+else
+    println("⚠ Complete the network (8 nodes) before running evidence queries.")
 end
 
 # %%
 # What if they also visited Asia?
-println("=== Smoker + abnormal X-ray + visited Asia ===")
-evidence2 = Assignment(:Smoker => 2, :XRay => 2, :Asia => 2)
-for node in [:LungCancer, :Tuberculosis, :Bronchitis]
-    p = query_bn(asia, node; evidence=evidence2)
-    println("  P($(node) = yes | Smoker, XRay, Asia) = $(round(p[2]; digits=4))")
+if length(bn_node_names(asia)) == 8
+    println("=== Smoker + abnormal X-ray + visited Asia ===")
+    evidence2 = Assignment(:Smoker => 2, :XRay => 2, :Asia => 2)
+    for node in [:LungCancer, :Tuberculosis, :Bronchitis]
+        p = query_bn(asia, node; evidence=evidence2)
+        println("  P($(node) = yes | Smoker, XRay, Asia) = $(round(p[2]; digits=4))")
+    end
+else
+    println("⚠ Complete the network (8 nodes) before running evidence queries.")
 end
 
 # %% [markdown]

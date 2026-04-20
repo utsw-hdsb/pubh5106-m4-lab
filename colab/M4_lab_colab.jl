@@ -8,9 +8,9 @@
 #       format_name: percent
 #       format_version: '1.3'
 #   kernelspec:
-#     display_name: Julia
+#     display_name: Julia 1.12
 #     language: julia
-#     name: julia
+#     name: julia-1.12
 # ---
 
 # %% [markdown]
@@ -18,94 +18,8 @@
 #
 # **PUBH 5106 — AI in Health Applications**
 #
-# **Platform:** Google Colab (Julia runtime)
+# **Platform:** GitHub Codespaces
 #
-# ## Colab Setup Instructions
-#
-# 1. In the menu bar, go to **Runtime → Change runtime type**
-# 2. Under **Runtime type**, select **Julia**
-# 3. Click **Save**
-# 4. Run the setup cell below — it installs packages and downloads
-#    lab files (~2-3 minutes the first time)
-
-# %% [markdown]
-# ---
-# ## Setup (Run This First)
-
-# %%
-# === COLAB SETUP — installs packages and downloads lab files ===
-# This cell takes 2-3 minutes on first run.
-
-using Pkg
-
-# Install required packages
-println("Installing packages...")
-Pkg.add(["BayesNets", "HTTP", "JSON3", "DataFrames"])
-println("Packages installed ✓")
-
-# Download lab files from GitHub
-println("\nDownloading lab files...")
-REPO_URL = "https://raw.githubusercontent.com/utsw-hdsb/pubh5106-m4-lab/main"
-
-mkpath("data")
-
-for f in ["lab_utils.jl",
-          "data/vignettes.json",
-          "data/llm_precomputed.json",
-          "data/asia_network.svg",
-          "data/child_network.svg"]
-    url = "$(REPO_URL)/$(f)"
-    try
-        download(url, f)
-        println("  $(f) ✓")
-    catch e
-        println("  $(f) FAILED: $(e)")
-    end
-end
-
-println("\nSetup complete!")
-
-# %%
-include("lab_utils.jl")
-using .LabUtils
-using BayesNets
-using JSON3
-
-# Bring all exported names into scope explicitly
-# (Colab's cell-by-cell execution can lose module scope)
-import .LabUtils: set_api_keys, call_llm, ask_llm_probability,
-    load_precomputed_llm, brier_score, calibration_error,
-    score_round, show_calibration, submit_to_leaderboard,
-    build_asia_network, build_child_network,
-    query_bn, query_bn_all, bn_node_names, bn_parents,
-    verify_setup, BNCategorical
-
-# %% [markdown]
-# ### Your Group Name and API Keys
-#
-# Set your group name and register your team's Groq API keys.
-# Each team member should create a free account at
-# [console.groq.com](https://console.groq.com) and generate an API key.
-
-# %%
-LabUtils.GROUP_NAME[] = "CHANGE_ME"  # <-- Set your group name here
-
-# %%
-set_api_keys([
-    "gsk_...",  # Team member 1
-    "gsk_...",  # Team member 2
-    "gsk_...",  # Team member 3
-])
-
-# %% [markdown]
-# ### Verify Setup
-
-# %%
-LabUtils.DATA_DIR[] = "data"
-verify_setup()
-
-# %% [markdown]
-# ---
 # ## Learning Objectives
 #
 # By the end of this lab, you will be able to:
@@ -118,11 +32,19 @@ verify_setup()
 #    stated confidence of a large language model on the same clinical cases
 # 4. Explain why Bayesian networks respond appropriately to base rate
 #    shifts and missing evidence while LLMs do not
+# 5. Evaluate the strengths and limitations of each reasoning approach
+#    (human intuition, Bayesian network, LLM) for clinical decision support
 #
 # ## How This Lab Works
 #
 # This is a **competitive group lab** scored on **calibration** — how well
-# your probability estimates match reality.
+# your probability estimates match reality. The best team is not the most
+# confident, but the most *accurately* confident.
+#
+# You will use three tools side by side:
+# - **Your intuition** — what you think the probability is
+# - **A Bayesian network** — what the math says
+# - **An LLM** — what a language model says
 #
 # | Round | Name | Time | What You Do |
 # |-------|------|------|-------------|
@@ -138,9 +60,32 @@ verify_setup()
 
 # %% [markdown]
 # ---
-# *The remainder of this notebook is identical to the Codespaces version.
-# All cells below this point work the same way.*
-#
+# ## Setup
+
+# %%
+using Pkg
+Pkg.activate(".")
+
+include("lab_utils.jl")
+using .LabUtils
+using BayesNets
+
+using JSON3
+
+# %% [markdown]
+# ### Your Group Name
+
+# %%
+LabUtils.GROUP_NAME[] = "CHANGE_ME"  # <-- Set your group name here
+
+# %% [markdown]
+# ### Verify Setup
+
+# %%
+LabUtils.DATA_DIR[] = "data"
+verify_setup()
+
+# %% [markdown]
 # ---
 # ## Warm-Up: A Production-Scale Clinical Bayesian Network (~10 min)
 #
@@ -177,7 +122,13 @@ verify_setup()
 # each patient has pneumonia. Write a number between 0.0 and 1.0.
 #
 # **Scoring:** Your estimates will be scored against epidemiological
-# ground truth using the Brier score.
+# ground truth using the Brier score. The point is not to get them
+# "right" — it's to see where your intuition is well-calibrated and
+# where it's biased.
+#
+# The most common bias you'll encounter: **base rate neglect** — the
+# tendency to focus on symptoms and ignore how common the disease is
+# in the clinical setting.
 
 # %%
 # Load vignettes
@@ -208,6 +159,7 @@ r1_truth = [case.ground_truth for case in r1_cases]
 r1_result = score_round(r1_human, [Int(t >= 0.5) for t in r1_truth])
 println("Your Brier score: $(brier_score(r1_human, [Int(t >= 0.5) for t in r1_truth]))")
 
+# Show per-case comparison
 println("\n  Case  Your Est.  Truth     Error")
 println("  " * "-"^40)
 for (i, case) in enumerate(r1_cases)
@@ -215,12 +167,20 @@ for (i, case) in enumerate(r1_cases)
     println("  $(i)     $(r1_human[i])       $(case.ground_truth)     $(round(err; digits=2))")
 end
 
+# Show explanations
 println("\n--- Explanations ---")
 for (i, case) in enumerate(r1_cases)
     println("  Case $(i): $(case.explanation)")
 end
 
 submit_to_leaderboard(1, r1_result)
+
+# %% [markdown]
+# **Discussion:** Where were you most wrong? The base rate trap is most
+# visible in Cases 1 vs. 2 — the *same symptom* (cough) has very different
+# implications depending on the clinical setting (ED vs. outpatient).
+# Bayes' theorem formalizes this: the prior probability (base rate) is
+# just as important as the likelihood (symptoms).
 
 # %% [markdown]
 # ---
@@ -234,7 +194,8 @@ submit_to_leaderboard(1, r1_result)
 # - **Lung cancer** (increased risk if smoker)
 # - **Bronchitis** (increased risk if smoker)
 #
-# The network has 8 nodes and 18 parameters.
+# The network has 8 nodes and 18 parameters. You will build it from
+# scratch using BayesNets.jl.
 #
 # ### The Network Structure
 #
@@ -281,9 +242,9 @@ submit_to_leaderboard(1, r1_result)
 # %%
 asia = DiscreteBayesNet()
 
-# Root nodes — done for you as an example
+# Root nodes (no parents) — these are done for you as an example
 push!(asia, DiscreteCPD(:Smoker, [0.5, 0.5]))
-push!(asia, DiscreteCPD(:Asia, [0.99, 0.01]))
+push!(asia, DiscreteCPD(:Asia, [0.01, 0.99]))
 
 # TODO: Add LungCancer node (parent: Smoker)
 # Hint: Use CategoricalCPD(:LungCancer, [:Smoker], [2], [...])
@@ -299,12 +260,15 @@ push!(asia, DiscreteCPD(:Asia, [0.99, 0.01]))
 # TODO: Add TbOrCancer node (parents: Tuberculosis, LungCancer)
 # This is a deterministic OR gate: P(TbOrCancer=yes) = 1.0 if either
 # parent is yes, 0.0 only if both parents are no.
+# Parent state ordering: (TB=yes,LC=yes), (TB=yes,LC=no),
+#                        (TB=no,LC=yes), (TB=no,LC=no)
 
 
 # TODO: Add XRay node (parent: TbOrCancer)
 
 
 # TODO: Add Dyspnoea node (parents: TbOrCancer, Bronchitis)
+# Use the Dyspnoea CPT table from the markdown above.
 
 
 println("ASIA network: $(length(bn_node_names(asia))) nodes")
@@ -313,44 +277,79 @@ println("ASIA network: $(length(bn_node_names(asia))) nodes")
 # ### 2.2 Visualize Your Network
 
 # %%
+# Display the ASIA network structure
 using Markdown
 display(Markdown.parse("![ASIA Network](data/asia_network.svg)"))
 
 # %% [markdown]
 # ### 2.3 Query the Network
+#
+# Test your network with some clinical scenarios.
+
+# %%
+# Check your network is complete before querying
+if length(bn_node_names(asia)) < 8
+    println("⚠ Your network has $(length(bn_node_names(asia)))/8 nodes.")
+    println("  Complete the TODO cells above before running queries.")
+    println("  Missing: $(setdiff([:Asia,:Smoker,:LungCancer,:Bronchitis,:Tuberculosis,:TbOrCancer,:XRay,:Dyspnoea], bn_node_names(asia)))")
+else
+    println("✓ Network complete: $(length(bn_node_names(asia))) nodes")
+end
 
 # %%
 # Prior probabilities (no evidence)
 println("=== Prior Probabilities (no evidence) ===")
 for node in [:LungCancer, :Tuberculosis, :Bronchitis]
-    p = query_bn(asia, node)
-    println("  P($(node) = yes) = $(round(p[2]; digits=4))")
+    if node in bn_node_names(asia)
+        p = query_bn(asia, node)
+        println("  P($(node) = yes) = $(round(p[2]; digits=4))")
+    else
+        println("  $(node): not yet added to network")
+    end
 end
 
 # %%
 # What if the patient is a smoker with an abnormal X-ray?
-println("=== Smoker with abnormal X-ray ===")
-evidence = Assignment(:Smoker => 2, :XRay => 2)
-for node in [:LungCancer, :Tuberculosis, :Bronchitis]
-    p = query_bn(asia, node; evidence=evidence)
-    println("  P($(node) = yes | Smoker, abnormal XRay) = $(round(p[2]; digits=4))")
+# State 2 = yes/present for all nodes
+if length(bn_node_names(asia)) == 8
+    println("=== Smoker with abnormal X-ray ===")
+    evidence = Assignment(:Smoker => 2, :XRay => 2)
+    for node in [:LungCancer, :Tuberculosis, :Bronchitis]
+        p = query_bn(asia, node; evidence=evidence)
+        println("  P($(node) = yes | Smoker, abnormal XRay) = $(round(p[2]; digits=4))")
+    end
+else
+    println("⚠ Complete the network (8 nodes) before running evidence queries.")
 end
 
 # %%
 # What if they also visited Asia?
-println("=== Smoker + abnormal X-ray + visited Asia ===")
-evidence2 = Assignment(:Smoker => 2, :XRay => 2, :Asia => 2)
-for node in [:LungCancer, :Tuberculosis, :Bronchitis]
-    p = query_bn(asia, node; evidence=evidence2)
-    println("  P($(node) = yes | Smoker, XRay, Asia) = $(round(p[2]; digits=4))")
+if length(bn_node_names(asia)) == 8
+    println("=== Smoker + abnormal X-ray + visited Asia ===")
+    evidence2 = Assignment(:Smoker => 2, :XRay => 2, :Asia => 2)
+    for node in [:LungCancer, :Tuberculosis, :Bronchitis]
+        p = query_bn(asia, node; evidence=evidence2)
+        println("  P($(node) = yes | Smoker, XRay, Asia) = $(round(p[2]; digits=4))")
+    end
+else
+    println("⚠ Complete the network (8 nodes) before running evidence queries.")
 end
 
 # %% [markdown]
 # **Discussion:** Notice how adding the Asia travel history shifts
 # probability toward TB and *away* from lung cancer — even though the
-# X-ray finding is the same. This is Bayesian reasoning in action.
+# X-ray finding is the same. This is Bayesian reasoning in action: new
+# evidence updates all related probabilities simultaneously through the
+# network structure.
+#
+# The **TbOrCancer** node is a deterministic OR gate — it is exactly 1
+# (true) if either TB or LungCancer is present. This is a logical
+# operation embedded in a probabilistic network. It bridges Module 3
+# (logic) and Module 4 (probability): the same system can encode both
+# certain logical rules and uncertain probabilistic relationships.
 
 # %%
+# Submit Round 2 (network construction is pass/fail)
 r2_result = Dict("composite" => length(bn_node_names(asia)) == 8 ? 100.0 : 0.0,
                  "brier_score" => 0.0, "calibration_error" => 0.0,
                  "n_cases" => 1)
@@ -358,23 +357,39 @@ submit_to_leaderboard(2, r2_result)
 
 # %% [markdown]
 # ---
-# ## Round 3: Head to Head (~35 min)
+# ## Round 3: Head to Head (~25 min)
 #
-# **The CHILD network** (20 nodes, 230+ parameters) — a pre-built
-# Bayesian network for diagnosing congenital heart disease in newborns
-# (Spiegelhalter & Cowell, 1992).
+# **Unlocked:** The CHILD network (20 nodes, 230 parameters) — a
+# pre-built Bayesian network for diagnosing congenital heart disease
+# in newborns (Spiegelhalter & Cowell, 1992).
 #
-# You will compare three sources on the same clinical cases:
-# 1. **Your intuition**
-# 2. **The Bayesian network**
-# 3. **An LLM** (via Groq API)
+# You will present the same patient cases to three sources:
+# 1. **Your intuition** — estimate the most likely diagnosis
+# 2. **The Bayesian network** — query the CHILD network
+# 3. **An LLM** — ask the language model
+#
+# Then compare how well-calibrated each source is.
+#
+# ### The CHILD Network
+#
+# The network models 6 possible diagnoses:
+# 1. PFC (persistent fetal circulation)
+# 2. TGA (transposition of great arteries)
+# 3. Fallot (tetralogy of Fallot)
+# 4. PAIVS (pulmonary atresia with intact ventricular septum)
+# 5. TAPVD (total anomalous pulmonary venous drainage)
+# 6. Lung disease
 
 # %%
+# Load the CHILD network (pre-built, no file parsing needed)
 child = build_child_network()
 println("CHILD network: $(length(bn_node_names(child))) nodes")
+
+# Display the network structure
 display(Markdown.parse("![CHILD Network](data/child_network.svg)"))
 
 # %%
+# Load the clinical cases
 child_cases = vignettes.child_cases
 
 println("=== Round 3: Head to Head ===\n")
@@ -383,9 +398,14 @@ for case in child_cases
 end
 
 # %% [markdown]
-# ### 3.1 Your Estimates (0.0 to 1.0)
+# ### 3.1 Your Estimates
+#
+# For each case, which of the 6 diagnoses is most likely? Estimate the
+# probability of the most likely diagnosis (0.0 to 1.0).
 
 # %%
+# TODO: Fill in your probability estimates for each case (0.0 to 1.0)
+# One estimate per case — your confidence in the most likely diagnosis.
 r3_human = [0.0, 0.0, 0.0]  # <-- Fill in your estimates
 
 # %% [markdown]
@@ -420,7 +440,9 @@ end
 # ### 3.4 Compare Calibration
 
 # %%
-r3_truth = [1, 1, 1]
+# Ground truth: was the BN's top diagnosis correct?
+r3_truth = [1, 1, 1]  # All cases have known diagnoses
+
 r3_bn_estimates = Float64.(r3_bn_results)
 r3_llm_estimates = Float64.(r3_llm_results)
 
@@ -433,7 +455,18 @@ r3_result = score_round(r3_bn_estimates, r3_truth)
 submit_to_leaderboard(3, r3_result)
 
 # %% [markdown]
+# **Discussion:**
+# - Which source was most confident? Most accurate?
+# - Did the LLM express appropriate uncertainty, or was it overconfident?
+# - The BN's probabilities come from the CPTs — they are *derived from
+#   data*. The LLM's probabilities come from... where?
+
+# %% [markdown]
 # ### 3.5 Stress Test: Base Rate Shift
+#
+# Same patient evidence, but now change the prior — what if this newborn
+# had birth asphyxia? The BN's prior P(Disease | BirthAsphyxia) shifts
+# the entire posterior. Does the LLM adjust?
 
 # %%
 stress = vignettes.stress_test
@@ -441,10 +474,12 @@ stress = vignettes.stress_test
 println("=== Base Rate Shift ===")
 println(stress.base_rate_shift.description)
 
+# Query with original evidence (no birth asphyxia)
 orig_ev = Assignment(Dict(Symbol(k) => v
     for (k, v) in pairs(stress.base_rate_shift.original_evidence)))
 p_orig = query_bn(child, :Disease; evidence=orig_ev)
 
+# Query with shifted evidence (birth asphyxia = yes)
 shift_ev = Assignment(Dict(Symbol(k) => v
     for (k, v) in pairs(stress.base_rate_shift.shifted_evidence)))
 p_shift = query_bn(child, :Disease; evidence=shift_ev)
@@ -458,6 +493,7 @@ for (i, d) in enumerate(diseases)
 end
 
 # %%
+# Ask the LLM both versions
 println("\n=== LLM Response ===")
 println("Original (no asphyxia):")
 llm_orig = ask_llm_probability(
@@ -477,10 +513,12 @@ println("LLM shift: $(round(llm_shift - llm_orig; sigdigits=3))")
 println("=== Missing Evidence ===")
 println(stress.missing_evidence.description)
 
+# BN with minimal evidence
 min_ev = Assignment(Dict(Symbol(k) => v
     for (k, v) in pairs(stress.missing_evidence.evidence)))
 p_minimal = query_bn(child, :Disease; evidence=min_ev)
 
+# Compare to prior (no evidence at all)
 p_prior = query_bn(child, :Disease)
 
 println("\n  Disease       Prior      Grunting Only")
@@ -490,6 +528,7 @@ for (i, d) in enumerate(diseases)
 end
 
 # %%
+# LLM with minimal evidence
 println("\nLLM with minimal evidence:")
 llm_minimal = ask_llm_probability(
     "A newborn presents with grunting only. No X-ray available, no O2 measurements, birth asphyxia status unknown.",
@@ -503,51 +542,82 @@ println("LLM P(TGA | grunting only) = $(llm_minimal)")
 #   it *knows it doesn't have enough information*. Did the LLM do the same?
 # - The base rate shift changed the BN's entire posterior distribution.
 #   The LLM likely gave similar answers regardless. Why?
+# - This is the core M4 message: **calibrated uncertainty matters more
+#   than confident answers** in clinical decision support.
 
 # %% [markdown]
 # ---
-# ## Reflection
+# ## Final Leaderboard and Reflection (~15 min)
 #
+# Your instructor will display the final leaderboard.
+
+# %% [markdown]
 # ### The Three Paradigms Compared
 #
-# | Paradigm | Tool | Strength | Weakness |
-# |----------|------|----------|----------|
-# | **ML (LLMs)** | llama3.1 | Flexible, fluent | Overconfident, no calibrated uncertainty |
-# | **Logic** | KGs, rules | Auditable, traceable | Brittle, no uncertainty |
-# | **Probability** | BNs | Calibrated uncertainty | Requires structure + data |
+# Over four modules, you have used all three AI paradigms from Module 1:
 #
-# The most trustworthy clinical AI systems draw on **all three**.
+# | Paradigm | Module | Tool | Strength | Weakness |
+# |----------|--------|------|----------|----------|
+# | **ML (LLMs)** | M1, M2 | llama3.2, qwen2.5 | Flexible, fluent, handles unstructured text | Overconfident, no calibrated uncertainty, hallucinates |
+# | **Logic** | M3 | System prompts, Gilda, KGs | Explicit, auditable, traceable | Brittle, requires complete knowledge, no uncertainty |
+# | **Probability** | M4 | Bayesian networks | Calibrated uncertainty, responds to evidence, principled | Requires known structure, CPTs from data, computationally expensive at scale |
+#
+# The most trustworthy clinical AI systems draw on **all three**:
+# - Logic to encode clinical rules and constraints
+# - Probability to quantify uncertainty
+# - ML to handle unstructured data and scale
+
+# %% [markdown]
+# ### Reflection Questions
+#
+# Discuss in your group and write your responses below.
 
 # %% [markdown]
 # **R1: When Should AI Say "I Don't Know"?**
+#
+# In the stress test, the BN responded to missing evidence by widening
+# its uncertainty (staying close to the prior). The LLM likely remained
+# confident. For a clinical decision support system, which behavior
+# is safer? When is uncertainty more valuable than a confident answer?
 
 # %%
 # YOUR RESPONSE:
-
+#
 
 # %% [markdown]
 # **R2: Could You Trust This Network?**
 #
-# The CHILD network was published in 1992. Would you deploy it in a NICU
-# today without changes? What would you need to update?
+# The CHILD network was published in 1992. Its CPTs were estimated from
+# clinical data available at that time. Would you deploy it in a NICU
+# today without changes? What would you need to update? How does this
+# compare to retraining an LLM on newer data?
 
 # %%
 # YOUR RESPONSE:
-
+#
 
 # %% [markdown]
 # **R3: The Three-Paradigm Synthesis**
 #
-# How would you combine a knowledge graph, a Bayesian network, and an LLM
-# for a clinical decision? What does each contribute?
+# A patient presents with ambiguous symptoms. You have three tools:
+# - A knowledge graph (M3) that says: "Drug X treats Disease Y"
+# - A Bayesian network (M4) that says: "P(Disease Y | symptoms) = 0.35"
+# - An LLM (M2) that says: "This patient likely has Disease Y"
+#
+# How would you combine these three sources for a clinical decision?
+# What does each one contribute that the others cannot?
 
 # %%
 # YOUR RESPONSE:
-
+#
 
 # %% [markdown]
 # ---
 # ## Submission
 #
-# Download this notebook (File → Download → Download .ipynb) and email it
-# to **brian.chapman@utsouthwestern.edu**.
+# Save this notebook and email it to **brian.chapman@utsouthwestern.edu**.
+# Ensure:
+# - All cells have been run
+# - Your group name is set correctly
+# - Written reflections (R1–R3) are complete
+# - All 3 rounds have been scored
