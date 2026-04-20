@@ -1,0 +1,1 @@
+{"child_cases":[{"label":"Case A","llm_probability":0.05,"id":"child_1","disease":"TGA"},{"label":"Case B","llm_probability":0.05,"id":"child_2","disease":"Fallot"},{"label":"Case C","llm_probability":0.8,"id":"child_3","disease":"Lung"}],"stress_test":{"base_rate_shifted":0.05,"missing_evidence":0.05,"base_rate_original":0.05}}

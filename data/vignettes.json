@@ -1,0 +1,155 @@
+{
+  "round1_base_rate": [
+    {
+      "id": "r1_1",
+      "vignette": "A 45-year-old man presents to the ED with a 3-day history of cough and fever. He has no significant past medical history.",
+      "question": "What is the probability this patient has community-acquired pneumonia?",
+      "ground_truth": 0.15,
+      "explanation": "ED prevalence of pneumonia is approximately 15%. Without additional findings, the base rate is the best estimate."
+    },
+    {
+      "id": "r1_2",
+      "vignette": "A 30-year-old woman presents to her primary care clinic with a 1-week history of productive cough. She is otherwise healthy.",
+      "question": "What is the probability this patient has community-acquired pneumonia?",
+      "ground_truth": 0.05,
+      "explanation": "Outpatient prevalence of pneumonia is much lower (~5%). Most productive coughs in young adults are viral."
+    },
+    {
+      "id": "r1_3",
+      "vignette": "A 70-year-old man with COPD and diabetes presents with fever, dyspnoea, and purulent sputum for 2 days.",
+      "question": "What is the probability this patient has community-acquired pneumonia?",
+      "ground_truth": 0.65,
+      "explanation": "Age >65, comorbidities (COPD, diabetes), and classic symptoms significantly raise the probability."
+    },
+    {
+      "id": "r1_4",
+      "vignette": "A 25-year-old woman presents with 2 weeks of dry cough. No fever. She recently returned from a conference where several attendees later tested positive for COVID-19.",
+      "question": "What is the probability this patient has community-acquired pneumonia?",
+      "ground_truth": 0.10,
+      "explanation": "Dry cough without fever is more suggestive of viral URI or COVID. Pneumonia is possible but less likely."
+    },
+    {
+      "id": "r1_5",
+      "vignette": "A 55-year-old smoker presents with haemoptysis and a 10 kg weight loss over 3 months. Chest X-ray shows a hilar mass.",
+      "question": "What is the probability this patient has community-acquired pneumonia?",
+      "ground_truth": 0.05,
+      "explanation": "The presentation is classic for lung cancer, not pneumonia. Haemoptysis + weight loss + hilar mass = high suspicion for malignancy."
+    }
+  ],
+  "child_cases": [
+    {
+      "id": "child_1",
+      "label": "Case A",
+      "description": "A 2-day-old newborn, no birth asphyxia. Grunting observed. Chest X-ray shows plethoric lung fields. O2 levels normal.",
+      "evidence": {
+        "BirthAsphyxia": 2,
+        "Grunting": 1,
+        "ChestXray": 3,
+        "LowerBodyO2": 3
+      },
+      "target": "Disease",
+      "ground_truth_disease": "TGA",
+      "ground_truth_idx": 2,
+      "explanation": "Plethoric lung fields + grunting in a non-asphyxiated newborn is most consistent with TGA (transposition of the great arteries)."
+    },
+    {
+      "id": "child_2",
+      "label": "Case B",
+      "description": "A 5-day-old newborn with birth asphyxia. Severe hypoxia, oligaemic lung fields on X-ray, grunting present.",
+      "evidence": {
+        "BirthAsphyxia": 1,
+        "HypoxiaInO2": 3,
+        "ChestXray": 2,
+        "Grunting": 1
+      },
+      "target": "Disease",
+      "ground_truth_disease": "Fallot",
+      "ground_truth_idx": 3,
+      "explanation": "Oligaemic lung fields indicate reduced pulmonary blood flow. Combined with severe hypoxia and birth asphyxia, Tetralogy of Fallot is most likely."
+    },
+    {
+      "id": "child_3",
+      "label": "Case C",
+      "description": "A 1-day-old newborn, no birth asphyxia. Ground glass appearance on X-ray. Mild hypoxia. No grunting.",
+      "evidence": {
+        "BirthAsphyxia": 2,
+        "ChestXray": 4,
+        "HypoxiaInO2": 1,
+        "Grunting": 2
+      },
+      "target": "Disease",
+      "ground_truth_disease": "Lung",
+      "ground_truth_idx": 6,
+      "explanation": "Ground glass X-ray with mild hypoxia and no grunting suggests primary lung disease (e.g., surfactant deficiency)."
+    }
+  ],
+  "stress_test": {
+    "base_rate_shift": {
+      "description": "Same patient as Case A, but now the NICU reports that 60% of admissions this week had birth asphyxia (unusual cluster).",
+      "original_evidence": {
+        "BirthAsphyxia": 2,
+        "Grunting": 1,
+        "ChestXray": 3,
+        "LowerBodyO2": 3
+      },
+      "shifted_evidence": {
+        "BirthAsphyxia": 1,
+        "Grunting": 1,
+        "ChestXray": 3,
+        "LowerBodyO2": 3
+      },
+      "explanation": "Changing BirthAsphyxia from 'no' to 'yes' shifts all downstream posteriors. The BN adjusts automatically; the LLM likely gives the same answer."
+    },
+    "missing_evidence": {
+      "description": "A newborn presents with grunting only. No X-ray available, no O2 measurements, birth asphyxia status unknown.",
+      "evidence": {
+        "Grunting": 1
+      },
+      "explanation": "With minimal evidence, the BN posterior should remain close to the prior (wide uncertainty). The LLM will likely still commit to a diagnosis."
+    }
+  },
+  "curveball": [
+    {
+      "id": "cb_1",
+      "label": "Curveball 1",
+      "vignette": "A 60-year-old smoker presents with shortness of breath. No recent travel. Chest X-ray is abnormal.",
+      "asia_evidence": {
+        "Smoker": 1,
+        "Asia": 2,
+        "Dyspnoea": 1,
+        "XRay": 1
+      },
+      "target": "LungCancer",
+      "ground_truth": 1,
+      "explanation": "Smoker + dyspnoea + abnormal X-ray. State 1 = yes for this network."
+    },
+    {
+      "id": "cb_2",
+      "label": "Curveball 2",
+      "vignette": "A 35-year-old non-smoker recently returned from Southeast Asia with cough and night sweats. X-ray shows upper lobe infiltrate.",
+      "asia_evidence": {
+        "Smoker": 2,
+        "Asia": 1,
+        "Dyspnoea": 1,
+        "XRay": 1
+      },
+      "target": "Tuberculosis",
+      "ground_truth": 1,
+      "explanation": "Asia travel + non-smoker + upper lobe infiltrate = TB is more likely than lung cancer."
+    },
+    {
+      "id": "cb_3",
+      "label": "Curveball 3",
+      "vignette": "A 50-year-old non-smoker with no travel history presents with chronic cough. X-ray is normal.",
+      "asia_evidence": {
+        "Smoker": 2,
+        "Asia": 2,
+        "Dyspnoea": 2,
+        "XRay": 2
+      },
+      "target": "Bronchitis",
+      "ground_truth": 1,
+      "explanation": "Non-smoker, no travel, normal X-ray, no dyspnoea. Chronic bronchitis is the most likely of the three differentials."
+    }
+  ]
+}
