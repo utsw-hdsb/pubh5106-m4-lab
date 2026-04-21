@@ -244,7 +244,7 @@ asia = DiscreteBayesNet()
 
 # Root nodes (no parents) — these are done for you as an example
 push!(asia, DiscreteCPD(:Smoker, [0.5, 0.5]))
-push!(asia, DiscreteCPD(:Asia, [0.01, 0.99]))
+push!(asia, DiscreteCPD(:Asia, [0.99, 0.01]))  # P(no)=0.99, P(yes)=0.01
 
 # TODO: Add LungCancer node (parent: Smoker)
 # Hint: Use CategoricalCPD(:LungCancer, [:Smoker], [2], [...])
