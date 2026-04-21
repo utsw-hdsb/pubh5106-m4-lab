@@ -242,34 +242,69 @@ submit_to_leaderboard(1, r1_result)
 # %%
 asia = DiscreteBayesNet()
 
-# Root nodes (no parents) — these are done for you as an example
+# ── Root nodes (no parents) ──────────────────────────────────────
+# These store just a prior: [P(no), P(yes)]
+
+# Smoker: 50% of the population smokes (DONE FOR YOU)
 push!(asia, DiscreteCPD(:Smoker, [0.5, 0.5]))
-push!(asia, DiscreteCPD(:Asia, [0.99, 0.01]))  # P(no)=0.99, P(yes)=0.01
 
-# TODO: Add LungCancer node (parent: Smoker)
-# Hint: Use CategoricalCPD(:LungCancer, [:Smoker], [2], [...])
-# State 1 = no, State 2 = yes. Provide a BNCategorical for each parent state.
+# Asia: 1% of patients have recently visited Asia (DONE FOR YOU)
+push!(asia, DiscreteCPD(:Asia, [0.99, 0.01]))
 
+# ── Nodes with ONE parent ────────────────────────────────────────
+# These use CategoricalCPD. Each BNCategorical is [P(no), P(yes)]
+# for one configuration of the parent.
+# The parent states are listed in order: parent=state1 (no), parent=state2 (yes).
 
-# TODO: Add Bronchitis node (parent: Smoker)
+# LungCancer (parent: Smoker)
+# From the table: P(LC=yes | Smoker=no)=0.01, P(LC=yes | Smoker=yes)=0.10
+# DONE FOR YOU as an example:
+push!(asia, CategoricalCPD(:LungCancer, [:Smoker], [2],
+    [BNCategorical([0.99, 0.01]),    # Smoker=no:  P(LC=no)=0.99, P(LC=yes)=0.01
+     BNCategorical([0.90, 0.10])]))  # Smoker=yes: P(LC=no)=0.90, P(LC=yes)=0.10
 
+# Bronchitis (parent: Smoker)
+# From the table: P(Br=yes | Smoker=no)=0.30, P(Br=yes | Smoker=yes)=0.60
+# DONE FOR YOU as an example:
+push!(asia, CategoricalCPD(:Bronchitis, [:Smoker], [2],
+    [BNCategorical([0.70, 0.30]),    # Smoker=no:  P(Br=no)=0.70, P(Br=yes)=0.30
+     BNCategorical([0.40, 0.60])]))  # Smoker=yes: P(Br=no)=0.40, P(Br=yes)=0.60
 
-# TODO: Add Tuberculosis node (parent: Asia)
+# Tuberculosis (parent: Asia)
+# From the table: P(TB=yes | Asia=no)=0.01, P(TB=yes | Asia=yes)=0.05
+# TODO: Fill in the probabilities below (replace the ??? values)
+push!(asia, CategoricalCPD(:Tuberculosis, [:Asia], [2],
+    [BNCategorical([???, ???]),       # Asia=no:  P(TB=no)=???, P(TB=yes)=???
+     BNCategorical([???, ???])]))     # Asia=yes: P(TB=no)=???, P(TB=yes)=???
 
+# XRay (parent: TbOrCancer)
+# From the table: P(abnormal | TbOrCa=no)=0.05, P(abnormal | TbOrCa=yes)=0.98
+# TODO: Fill in the probabilities
+push!(asia, CategoricalCPD(:XRay, [:TbOrCancer], [2],
+    [BNCategorical([???, ???]),       # TbOrCa=no:  P(normal)=???, P(abnormal)=???
+     BNCategorical([???, ???])]))     # TbOrCa=yes: P(normal)=???, P(abnormal)=???
 
-# TODO: Add TbOrCancer node (parents: Tuberculosis, LungCancer)
-# This is a deterministic OR gate: P(TbOrCancer=yes) = 1.0 if either
-# parent is yes, 0.0 only if both parents are no.
-# Parent state ordering: (TB=yes,LC=yes), (TB=yes,LC=no),
-#                        (TB=no,LC=yes), (TB=no,LC=no)
+# ── Node with TWO parents (deterministic) ────────────────────────
+# TbOrCancer is a logical OR: true if EITHER TB or LungCancer is true.
+# With two binary parents, there are 2×2=4 parent configurations.
+# Parent order: (TB state, LC state) cycling LC fastest.
+# TODO: Fill in the probabilities (this is a deterministic gate — each
+# row should be [1.0, 0.0] or [0.0, 1.0])
+push!(asia, DiscreteCPD(:TbOrCancer, [:Tuberculosis, :LungCancer], [2, 2],
+    [BNCategorical([???, ???]),       # TB=no,  LC=no  → TbOrCa should be NO
+     BNCategorical([???, ???]),       # TB=no,  LC=yes → TbOrCa should be YES
+     BNCategorical([???, ???]),       # TB=yes, LC=no  → TbOrCa should be YES
+     BNCategorical([???, ???])]))     # TB=yes, LC=yes → TbOrCa should be YES
 
-
-# TODO: Add XRay node (parent: TbOrCancer)
-
-
-# TODO: Add Dyspnoea node (parents: TbOrCancer, Bronchitis)
-# Use the Dyspnoea CPT table from the markdown above.
-
+# ── Node with TWO parents (probabilistic) ────────────────────────
+# Dyspnoea (parents: TbOrCancer, Bronchitis)
+# From the Dyspnoea CPT table above. 2×2=4 parent configurations.
+# TODO: Fill in from the table
+push!(asia, CategoricalCPD(:Dyspnoea, [:TbOrCancer, :Bronchitis], [2, 2],
+    [BNCategorical([???, ???]),       # TbOrCa=no,  Br=no:  P(Dysp=yes)=0.10
+     BNCategorical([???, ???]),       # TbOrCa=no,  Br=yes: P(Dysp=yes)=0.80
+     BNCategorical([???, ???]),       # TbOrCa=yes, Br=no:  P(Dysp=yes)=0.70
+     BNCategorical([???, ???])]))     # TbOrCa=yes, Br=yes: P(Dysp=yes)=0.90
 
 println("ASIA network: $(length(bn_node_names(asia))) nodes")
 
