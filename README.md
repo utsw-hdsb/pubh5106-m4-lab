@@ -18,15 +18,7 @@ A competitive lab where student teams compare three approaches to clinical reaso
 
 Click the badge above. First build takes ~5-10 min (Julia package compilation). Subsequent launches are faster if the image is cached.
 
-### Option C: Google Colab
-
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/utsw-hdsb/pubh5106-m4-lab/blob/main/colab/M4_lab_colab.ipynb)
-
-Click the badge above, then:
-1. Go to **Runtime → Change runtime type → Julia**
-2. Run the first cell to install packages and download lab files (~2-3 min)
-
-### Option D: Run Locally
+### Option C: Run Locally
 
 See [LOCAL_SETUP_GUIDE.md](LOCAL_SETUP_GUIDE.md) for step-by-step instructions (Mac and Windows). No separate Python installation needed — Julia manages everything.
 
@@ -50,8 +42,6 @@ See [LOCAL_SETUP_GUIDE.md](LOCAL_SETUP_GUIDE.md) for step-by-step instructions (
 .
 ├── M4_lab.ipynb           # Lab notebook (Codespaces / Binder / Local)
 ├── M4_lab.jl              # Notebook source (jupytext)
-├── colab/
-│   └── M4_lab_colab.ipynb # Self-contained Colab version
 ├── lab_utils.jl           # Shared utilities (BN, Groq API, scoring)
 ├── Project.toml           # Julia dependencies
 ├── LOCAL_SETUP_GUIDE.md   # Local installation instructions
