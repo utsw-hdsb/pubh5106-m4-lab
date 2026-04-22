@@ -18,7 +18,7 @@
 #
 # **PUBH 5106 — AI in Health Applications**
 #
-# **Platform:** GitHub Codespaces
+# **Platform:** Google Colab
 #
 # ## Learning Objectives
 #
@@ -61,6 +61,20 @@
 # %% [markdown]
 # ---
 # ## Setup
+#
+# **Colab bootstrap:** the cell below clones the lab repo into `/content`
+# and `cd`s into it so the rest of the notebook can find `lab_utils.jl`,
+# `Project.toml`, and the `data/` directory. Run it once per session.
+
+# %%
+# Bootstrap — fetch the lab repo into /content if files are not present
+if !isfile("lab_utils.jl")
+    println("Bootstrapping for Colab — cloning lab repo...")
+    rm("/content/m4lab"; recursive=true, force=true)
+    run(`git clone --depth 1 https://github.com/utsw-hdsb/pubh5106-m4-lab.git /content/m4lab`)
+    cd("/content/m4lab")
+    println("Working directory: $(pwd())")
+end
 
 # %%
 using Pkg
