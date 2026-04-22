@@ -237,6 +237,88 @@ submit_to_leaderboard(1, r1_result)
 # **Encoding:** State 1 = no/absent, State 2 = yes/present.
 
 # %% [markdown]
+# ### Before You Code — Three Julia Conventions That Will Trip You Up
+#
+# Read this whole section before touching the code cell. It will save you
+# thirty minutes of debugging and a lot of confusion about why your
+# posteriors look wrong.
+#
+# #### 1. Julia arrays start at 1, not 0
+#
+# Unlike Python and R, the first element of an array in Julia has index 1:
+#
+# ```julia
+# probabilities = [0.99, 0.01]
+# probabilities[1]   # returns 0.99  ← the FIRST element
+# probabilities[2]   # returns 0.01  ← the SECOND element
+# ```
+#
+# When we talk about "state 1" and "state 2" of a node, we mean the 1st and
+# 2nd positions in the probability vector. There is no state 0.
+#
+# #### 2. In this model, state 1 = No/False and state 2 = Yes/True
+#
+# Every node in the ASIA network is **binary** (two possible outcomes).
+# We adopt a single convention across the whole network:
+#
+# | State index | Meaning | Smoker node | Asia node | Dyspnoea node |
+# |-------------|---------|-------------|-----------|---------------|
+# | **1** | no / false / absent | not a smoker | never visited Asia | no dyspnoea |
+# | **2** | yes / true / present | is a smoker | did visit Asia | has dyspnoea |
+#
+# #### 3. Probability vectors are written `[P(no), P(yes)]` — NO first, YES second
+#
+# Every probability vector in the code below follows the state-1-then-state-2
+# order: the probability of "no" comes first, "yes" comes second.
+#
+# ```julia
+# # P(smoker) = 0.50 in the general population
+# #     P(not a smoker) = 0.50        P(smoker) = 0.50
+# #         ↓                           ↓
+# DiscreteCPD(:Smoker, [0.50, 0.50])
+# #                    [state 1 ,  state 2]
+# #                    [ "no"   ,   "yes" ]
+# ```
+#
+# If you accidentally swap the order, the network will run without any error
+# message — and produce wrong answers. Double-check every vector before
+# moving on.
+#
+# #### 4. For nodes with two parents, the LAST parent cycles fastest
+#
+# When a node has two parents, the CPT needs one probability vector for
+# every combination of parent states. With two binary parents, that is
+# 2 × 2 = **4 rows**, listed in this order:
+#
+# | Row | Parent 1 state | Parent 2 state |
+# |-----|----------------|----------------|
+# | 1 | 1 (no)  | 1 (no)  |
+# | 2 | 1 (no)  | 2 (yes) |
+# | 3 | 2 (yes) | 1 (no)  |
+# | 4 | 2 (yes) | 2 (yes) |
+#
+# So for `[:TbOrCancer, :Bronchitis]`, the rows cycle Bronchitis (the last
+# parent) fastest. The inline comments on each row of the Dyspnoea CPT below
+# will tell you exactly which parent configuration you are filling in.
+#
+# ### BayesNets.jl Types — When to Use Which
+#
+# You will see three type names in the code. Each plays a specific role:
+#
+# | Type | What it is | When you use it |
+# |------|------------|-----------------|
+# | **`DiscreteCPD`** | The CPT object that attaches to a node in the network | Used for **root nodes** (no parents — you pass just a prior vector like `[0.99, 0.01]`) AND for nodes whose CPT is built from a list of distributions (the `TbOrCancer` deterministic node below uses this form). You always `push!` a `DiscreteCPD` or `CategoricalCPD` into the network. |
+# | **`CategoricalCPD`** | A CPT specifically designed for a node with parents | Used for any non-root node. Signature: `CategoricalCPD(:Node, [:Parent1], [2], [distributions...])`. The second argument lists the parents; the third tells BayesNets how many states each parent has (here, always `[2]` or `[2, 2]` because every node is binary). |
+# | **`BNCategorical`** | A **single** categorical distribution — one row of a CPT | Wraps each row: `BNCategorical([P(state1), P(state2)])`. A `CategoricalCPD` contains a list of `BNCategorical`s, one per parent configuration. |
+#
+# **Mental model:** a `CategoricalCPD` is the whole table. Each row of that
+# table is a `BNCategorical`. The `push!` adds the table to the network. When
+# you look at `LungCancer` below, you will see all three pieces stacked.
+#
+# Now read the code carefully. `Smoker`, `Asia`, `LungCancer`, and `Bronchitis`
+# are filled in for you as templates. Copy the patterns for the TODO nodes.
+
+# %% [markdown]
 # ### 2.1 Build the Network
 
 # %%
