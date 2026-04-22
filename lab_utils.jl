@@ -190,14 +190,25 @@ $(vignette)
 
 Respond with a single number between 0.0 and 1.0:"""
 
-    resp = call_llm(prompt; model=model, system=system, temperature=0.0)
-
-    m = match(r"(0?\.\d+|1\.0|0|1)", strip(resp))
-    if m !== nothing
-        return parse(Float64, m.match)
+    try
+        resp = call_llm(prompt; model=model, system=system, temperature=0.0)
+        m = match(r"(0?\.\d+|1\.0|0|1)", strip(resp))
+        if m !== nothing
+            return parse(Float64, m.match)
+        end
+        @warn "Could not parse LLM probability from: $(resp)"
+        return -1.0
+    catch e
+        # Live API unavailable (no keys, rate-limited, network error).
+        # Fall back to the precomputed responses if we have one for this
+        # (vignette, disease) pair. If not, propagate the original error.
+        precomp = _try_precomputed(vignette, disease)
+        if precomp !== nothing
+            println("  [precomputed fallback] P($(disease)) = $(precomp)")
+            return precomp
+        end
+        rethrow(e)
     end
-    @warn "Could not parse LLM probability from: $(resp)"
-    return -1.0
 end
 
 # ─────────────────────────────────────────────────────────────────────
@@ -219,6 +230,75 @@ function load_precomputed_llm(filename::String="llm_precomputed.json")
     end
     @warn "Pre-computed file not found: $(path)"
     return Dict()
+end
+
+# Internal: cached (vignette, disease) -> probability lookup, built lazily
+# from llm_precomputed.json + vignettes.json on first need. Engaged
+# automatically by ask_llm_probability when the live API call fails.
+const _precomputed_cache = Ref{Dict{Tuple{String,String}, Float64}}(
+    Dict{Tuple{String,String}, Float64}())
+const _precomputed_loaded = Ref(false)
+
+function _build_precomputed_cache!()
+    _precomputed_loaded[] = true
+    cache = Dict{Tuple{String,String}, Float64}()
+
+    pc_path = joinpath(DATA_DIR[], "llm_precomputed.json")
+    if !isfile(pc_path)
+        _precomputed_cache[] = cache
+        return
+    end
+    pc = JSON3.read(read(pc_path, String))
+
+    # child_cases: join by id with vignettes.json to recover description text
+    vg_path = joinpath(DATA_DIR[], "vignettes.json")
+    if isfile(vg_path) && haskey(pc, :child_cases)
+        vg = JSON3.read(read(vg_path, String))
+        if haskey(vg, :child_cases)
+            vg_by_id = Dict(string(c.id) => c for c in vg.child_cases)
+            for entry in pc.child_cases
+                id = string(entry.id)
+                if haskey(vg_by_id, id)
+                    desc = String(vg_by_id[id].description)
+                    cache[(desc, String(entry.disease))] =
+                        Float64(entry.llm_probability)
+                end
+            end
+        end
+    end
+
+    _precomputed_cache[] = cache
+end
+
+function _try_precomputed(vignette::String, disease::String)
+    _precomputed_loaded[] || _build_precomputed_cache!()
+
+    # Exact match on (description, disease) for child_cases vignettes
+    cache = _precomputed_cache[]
+    haskey(cache, (vignette, disease)) && return cache[(vignette, disease)]
+
+    # The notebook hardcodes its own variants of the stress-test prompts
+    # (different wording from vignettes.json's stress_test descriptions),
+    # so substring-match those onto the precomputed stress_test entries.
+    pc_path = joinpath(DATA_DIR[], "llm_precomputed.json")
+    if isfile(pc_path) && disease == "TGA"
+        pc = JSON3.read(read(pc_path, String))
+        if haskey(pc, :stress_test)
+            stress = pc.stress_test
+            if occursin("WITH birth asphyxia", vignette) &&
+               haskey(stress, :base_rate_shifted)
+                return Float64(stress.base_rate_shifted)
+            elseif occursin("no birth asphyxia", vignette) &&
+                   haskey(stress, :base_rate_original)
+                return Float64(stress.base_rate_original)
+            elseif occursin("grunting only", vignette) &&
+                   haskey(stress, :missing_evidence)
+                return Float64(stress.missing_evidence)
+            end
+        end
+    end
+
+    return nothing
 end
 
 # ─────────────────────────────────────────────────────────────────────
