@@ -313,8 +313,9 @@ println("ASIA network: $(length(bn_node_names(asia))) nodes")
 
 # %%
 # Display the ASIA network structure
-using Markdown
-display(Markdown.parse("![ASIA Network](data/asia_network.svg)"))
+# (raw SVG via explicit MIME — Markdown.parse caused a KaTeX
+# parse error on the figure environment in the rendered SVG)
+display("image/svg+xml", read("data/asia_network.svg", String))
 
 # %% [markdown]
 # ### 2.3 Query the Network
@@ -420,8 +421,8 @@ submit_to_leaderboard(2, r2_result)
 child = build_child_network()
 println("CHILD network: $(length(bn_node_names(child))) nodes")
 
-# Display the network structure
-display(Markdown.parse("![CHILD Network](data/child_network.svg)"))
+# Display the network structure (raw SVG via explicit MIME)
+display("image/svg+xml", read("data/child_network.svg", String))
 
 # %%
 # Load the clinical cases
