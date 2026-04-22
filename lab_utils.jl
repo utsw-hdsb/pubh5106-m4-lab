@@ -349,15 +349,29 @@ function submit_to_leaderboard(round_num::Int, result::Dict)
         println("[Leaderboard not configured] Round $(round_num): composite=$(result["composite"])")
         return
     end
+    if GROUP_NAME[] == "CHANGE_ME"
+        println("[GROUP_NAME not set] Submission would tag your team as 'CHANGE_ME' — skipping. Set LabUtils.GROUP_NAME[] = \"YourTeam\" first.")
+        return
+    end
+    # Google Forms accepts both multipart and URL-encoded bodies, but
+    # multipart submissions are sometimes silently dropped. URL-encoded
+    # is the reliable path.
+    body = string(
+        FIELD_GROUP[],  "=", HTTP.escapeuri(GROUP_NAME[]),
+        "&", FIELD_ROUND[],  "=", round_num,
+        "&", FIELD_SCORE[],  "=", result["composite"],
+        "&", FIELD_DETAIL[], "=", HTTP.escapeuri(JSON3.write(result)),
+    )
     try
-        body = HTTP.Form(Dict(
-            FIELD_GROUP[] => GROUP_NAME[],
-            FIELD_ROUND[] => string(round_num),
-            FIELD_SCORE[] => string(result["composite"]),
-            FIELD_DETAIL[] => JSON3.write(result),
-        ))
-        HTTP.post(FORM_URL[], body; readtimeout=10)
-        println("Submitted: Round $(round_num), Score $(result["composite"])")
+        resp = HTTP.post(FORM_URL[],
+                         ["Content-Type" => "application/x-www-form-urlencoded"],
+                         body;
+                         status_exception=false, readtimeout=10)
+        if resp.status == 200
+            println("✓ Submitted Round $(round_num): composite=$(result["composite"])")
+        else
+            println("✗ Submission HTTP $(resp.status) for Round $(round_num)")
+        end
     catch e
         println("Submission failed: $(e)")
     end
